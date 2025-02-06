@@ -1,0 +1,45 @@
+body {
+    background: url('images/wall-texture.jpg') no-repeat center center fixed;
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+#slideshow {
+    position: relative;
+    width: 600px;
+    height: 400px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#photo-container {
+    position: absolute;
+    width: 90%;
+    height: 90%;
+    background: white;
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+    transform: rotate(-3deg);
+    padding: 10px;
+    text-align: center;
+}
+
+#photo {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+#caption {
+    font-family: "Dancing Script", cursive;
+    font-size: 18px;
+    background: white;
+    padding: 5px;
+    display: inline-block;
+    margin-top: 10px;
+    border-radius: 5px;
+}
