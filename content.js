@@ -5,8 +5,11 @@ function getImagesAndCaptions() {
         let caption = captionElem ? captionElem.innerText.trim() : "No caption available";
         images.push({ src: img.src, caption });
     });
-    return images;
+
+    if (images.length > 0) {
+        chrome.storage.local.set({ images });
+    }
 }
 
-// Send extracted data to popup
-chrome.runtime.sendMessage({ type: "BBC_IMAGES", images: getImagesAndCaptions() });
+// Run when page loads
+getImagesAndCaptions();
