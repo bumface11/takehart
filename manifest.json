@@ -1,26 +1,31 @@
 {
-    "manifest_version": 3,
-    "name": "BBC Slideshow Viewer",
-    "version": "1.0",
-    "description": "Extracts images from BBC News and displays them as a vintage slideshow.",
-    "permissions": ["activeTab", "scripting", "storage"],
-    "host_permissions": ["https://www.bbc.co.uk/news/articles/*"],
-    "background": {
-      "service_worker": "background.js"
-    },
-    "action": {
-      "default_popup": "popup.html",
-      "default_icon": {
-        "16": "icons/gallery16.png",
-        "48": "icons/gallery48.png",
-        "128": "icons/gallery128.png"
-      }
-    },
-    "content_scripts": [
-      {
-        "matches": ["https://www.bbc.co.uk/news/articles/*"],
-        "js": ["content.js"]
-      }
-    ]
-  }
-  
+  "manifest_version": 3,
+  "name": "BBC Slideshow 3D",
+  "version": "1.0",
+  "description": "View BBC article images in a 3D gallery with smooth transitions.",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://www.bbc.co.uk/news/articles/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Open 3D Slideshow",
+    "default_icon": {
+      "16": "icons/gallery16.png",
+      "48": "icons/gallery48.png",
+      "128": "icons/gallery128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.bbc.co.uk/news/articles/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/*.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

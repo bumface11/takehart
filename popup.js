@@ -1,12 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
     const startBtn = document.getElementById("start-btn");
     const stopBtn = document.getElementById("stop-btn");
+    const photoContainer = document.getElementById("photo-container");
     const photo = document.getElementById("photo");
     const caption = document.getElementById("caption");
-
     let images = [];
     let currentIndex = 0;
     let intervalId = null;
+    let isTransitioning = false;
 
     // Load stored images
     chrome.storage.local.get("images", data => {
@@ -17,34 +18,74 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    function getRandomDirection() {
+        const directions = ["left", "right", "up", "down"];
+        return directions[Math.floor(Math.random() * directions.length)];
+    }
+
+    function moveWall(direction) {
+        const body = document.body;
+        let currentX = parseInt(body.style.backgroundPositionX || "0");
+        let currentY = parseInt(body.style.backgroundPositionY || "0");
+
+        switch (direction) {
+            case "left":
+                body.style.backgroundPositionX = `${currentX - 50}px`;
+                photoContainer.style.transform = "translateX(-100vw)";
+                break;
+            case "right":
+                body.style.backgroundPositionX = `${currentX + 50}px`;
+                photoContainer.style.transform = "translateX(100vw)";
+                break;
+            case "up":
+                body.style.backgroundPositionY = `${currentY - 50}px`;
+                photoContainer.style.transform = "translateY(-100vh)";
+                break;
+            case "down":
+                body.style.backgroundPositionY = `${currentY + 50}px`;
+                photoContainer.style.transform = "translateY(100vh)";
+                break;
+        }
+    }
+
     function showNextImage() {
-        if (images.length === 0) return;
+        if (images.length === 0 || isTransitioning) return;
+
+        isTransitioning = true;
 
         if (currentIndex >= images.length) {
             currentIndex = 0;
         }
 
         let imageData = images[currentIndex];
+
+        // Set new photo and caption
         photo.src = imageData.src;
         caption.innerText = imageData.caption;
 
-        // Old-fashioned TV panning effect
-        let direction = currentIndex % 2 === 0 ? "left" : "right";
-        photo.style.transition = "transform 0.5s ease-in-out";
-        photo.style.transform = `translateX(${direction === "left" ? "-20px" : "20px"})`;
-
+        // Pause for 2 seconds before moving
         setTimeout(() => {
-            photo.style.transform = "translateX(0)";
-        }, 500);
+            let direction = getRandomDirection();
+            moveWall(direction);
 
-        currentIndex++;
+            setTimeout(() => {
+                // Reset position for next image
+                photoContainer.style.transition = "none";
+                photoContainer.style.transform = "translateX(0) translateY(0)";
+                setTimeout(() => {
+                    photoContainer.style.transition = "transform 1s ease-in-out";
+                    currentIndex++;
+                    isTransitioning = false;
+                }, 50);
+            }, 1000);
+        }, 2000);
     }
 
     function startSlideshow() {
         if (images.length === 0) return;
 
         showNextImage();
-        intervalId = setInterval(showNextImage, 3000);
+        intervalId = setInterval(showNextImage, 4000); // 2s pause + 1s transition
         startBtn.disabled = true;
         stopBtn.disabled = false;
     }

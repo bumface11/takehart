@@ -1,84 +1,51 @@
-
-
-html, body {
-    width: 800px;
-    height: 600px;
-    overflow: hidden;
-}
-
 body {
-    background: url('images/wall-texture.jpg') no-repeat center center fixed;
+    background: url('images/wall-texture.jpg') repeat;
     background-size: cover;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    margin: 0;
-    font-family: Arial, sans-serif;
-}
-
-/* Control buttons */
-#controls {
-    margin-bottom: 10px;
-}
-
-button {
-    background: #8B4513;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    margin: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    border-radius: 5px;
-}
-
-button:disabled {
-    background: gray;
-    cursor: not-allowed;
+    transition: background-position 1s ease-in-out;
+    overflow: hidden;
 }
 
 /* Slideshow container */
 #slideshow {
     position: relative;
-    width: 600px;
-    height: 400px;
+    width: 100vw;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-/* Polaroid-style image frame */
+/* Pinned photo effect */
 #photo-container {
     position: absolute;
-    width: 90%;
-    height: 90%;
+    width: 600px;
+    max-width: 80%;
+    height: auto;
     background: white;
     box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
     transform: rotate(-3deg);
     padding: 10px;
     text-align: center;
     border-radius: 10px;
+    transition: transform 1s ease-in-out, opacity 0.5s ease-in-out;
 }
 
-/* Image styling */
+/* Image and caption */
 #photo {
     max-width: 100%;
-    max-height: 80%;
+    max-height: 80vh;
     display: block;
     margin: auto;
 }
 
-/* Caption styling */
 #caption {
     font-family: "Dancing Script", cursive;
-    font-size: 18px;
-    color: black;
+    font-size: 22px;
     background: white;
     padding: 5px;
     display: inline-block;
     margin-top: 10px;
     border-radius: 5px;
     box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.2);
+    transition: opacity 0.5s ease-in-out;
 }

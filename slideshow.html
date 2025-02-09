@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBC 3D Slideshow</title>
+    <script src="lib/three.min.js"></script>  <!-- Local Three.js -->
+    <script src="lib/tween.umd.js"></script>  <!-- Local Tween.js -->
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+        button {
+            background: #8B4513;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        button:disabled {
+            background: gray;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <button id="start-btn">Start Slideshow</button>
+        <button id="stop-btn" disabled>Stop Slideshow</button>
+    </div>
+    <script src="slideshow.js"></script>  <!-- Your main script -->
+</body>
+</html>

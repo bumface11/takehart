@@ -1,5 +1,3 @@
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "BBC_IMAGES") {
-        chrome.storage.local.set({ images: message.images });
-    }
+chrome.action.onClicked.addListener(() => {
+    chrome.tabs.create({ url: "slideshow.html" });
 });
