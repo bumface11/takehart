@@ -119,53 +119,55 @@ function animate() {
 
 function moveCameraToNextPhoto() {
     if (photoPlanes.length === 0 || isTransitioning) return;
+
     isTransitioning = true;
 
-    if (currentIndex >= photoPlanes.length) {
-        currentIndex = 0; // Restart slideshow
-    }
-
-    const target = photoPlanes[currentIndex].position;
-
-    // Step 1: Zoom in
+    const targetIndex = currentIndex % photoPlanes.length;
+    const target = photoPlanes[targetIndex].position;
+    console.log("0");
     new TWEEN.Tween(camera.position)
-        .to({ x: target.x, y: target.y, z: 3 }, 2000) // Move closer
-        .easing(TWEEN.Easing.Quadratic.Out)
-        .onComplete(() => {
-            // Step 2: Pause before panning
-            setTimeout(() => {
-                // Step 3: Pan to the next image
-                new TWEEN.Tween(camera.position)
-                    .to({ x: target.x, y: target.y, z: 8 }, 2000) // Move back
-                    .easing(TWEEN.Easing.Quadratic.Out)
-                    .onComplete(() => {
-                        isTransitioning = false;
-                    })
-                    .start();
-            }, 1000); // Pause for 1 second before panning
-        })
-        .start();
-
-    currentIndex++;
+    .to({ x: target.x, y: target.y, z: 3 }, 2000)
+    .easing(TWEEN.Easing.Quadratic.Out)
+    .onComplete(() => {
+        console.log("1");
+        setTimeout(() => {
+            console.log("2");
+            new TWEEN.Tween(camera.position)
+                .to({ x: target.x, y: target.y, z: 8 }, 2000)
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .onComplete(() => {
+                    console.log("3");
+                    isTransitioning = false;
+                    currentIndex++;
+                })
+                .start();
+            TWEEN.update(); // Add this line!
+        }, 1000);
+    })
+    .start();
+TWEEN.update(); // Add this line!
 }
-
-
 
 function startSlideshow() {
     if (photoPlanes.length === 0) {
         alert("No images loaded. Try refreshing the extension.");
         return;
     }
+console.log("a");
+    if (intervalId) clearInterval(intervalId); // Clear any existing interval
 
-    moveCameraToNextPhoto(); // ✅ Start animation immediately
-    intervalId = setInterval(moveCameraToNextPhoto, 7000); // ✅ Move every 7 sec
+    moveCameraToNextPhoto(); // Start animation immediately
+    console.log("b");
+    intervalId = setInterval(moveCameraToNextPhoto, 7000); // 7 seconds
+
     document.getElementById("start-btn").disabled = true;
     document.getElementById("stop-btn").disabled = false;
 }
 
-
 function stopSlideshow() {
     clearInterval(intervalId);
+    intervalId = null; // Clear intervalId
+    isTransitioning = false; // Reset isTransitioning
     document.getElementById("start-btn").disabled = false;
     document.getElementById("stop-btn").disabled = true;
 }
