@@ -114,55 +114,73 @@ async function init3DScene() {
 function animate() {
     requestAnimationFrame(animate);
     TWEEN.update();
+    console.log("Animation frame running...");  // ✅ Should print continuously
     renderer.render(scene, camera);
 }
 
+
 function moveCameraToNextPhoto() {
     if (photoPlanes.length === 0 || isTransitioning) return;
-
     isTransitioning = true;
 
-    const targetIndex = currentIndex % photoPlanes.length;
-    const target = photoPlanes[targetIndex].position;
-    console.log("0");
+    console.log("Starting animation for image:", currentIndex);
+
+    if (currentIndex >= photoPlanes.length) {
+        currentIndex = 0; // Restart slideshow
+    }
+
+    const target = photoPlanes[currentIndex].position;
+
+    // Step 1: Zoom in
     new TWEEN.Tween(camera.position)
-    .to({ x: target.x, y: target.y, z: 3 }, 2000)
-    .easing(TWEEN.Easing.Quadratic.Out)
-    .onComplete(() => {
-        console.log("1");
-        setTimeout(() => {
-            console.log("2");
-            new TWEEN.Tween(camera.position)
-                .to({ x: target.x, y: target.y, z: 8 }, 2000)
-                .easing(TWEEN.Easing.Quadratic.Out)
-                .onComplete(() => {
-                    console.log("3");
-                    isTransitioning = false;
-                    currentIndex++;
-                })
-                .start();
-            TWEEN.update(); // Add this line!
-        }, 1000);
-    })
-    .start();
-TWEEN.update(); // Add this line!
+        .to({ x: target.x, y: target.y, z: 3 }, 2000)
+        .easing(TWEEN.Easing.Quadratic.Out)
+        .onStart(() => console.log("Zoom in started"))
+        .onUpdate(() => console.log("Zooming... Camera position:", camera.position))
+        .onComplete(() => {
+            console.log("Zoom in complete");
+
+            // Step 2: Pause before panning
+            setTimeout(() => {
+                console.log("Starting pan to next image...");
+
+                // Step 3: Pan to the next image
+                new TWEEN.Tween(camera.position)
+                    .to({ x: target.x, y: target.y, z: 8 }, 2000)
+                    .easing(TWEEN.Easing.Quadratic.Out)
+                    .onStart(() => console.log("Panning started"))
+                    .onUpdate(() => console.log("Panning... Camera position:", camera.position))
+                    .onComplete(() => {
+                        console.log("Panning complete");
+                        isTransitioning = false;
+                    })
+                    .start();
+            }, 1000); // Pause for 1 second before panning
+        })
+        .start();
+
+    currentIndex++;
 }
+
 
 function startSlideshow() {
     if (photoPlanes.length === 0) {
         alert("No images loaded. Try refreshing the extension.");
         return;
     }
-console.log("a");
-    if (intervalId) clearInterval(intervalId); // Clear any existing interval
 
-    moveCameraToNextPhoto(); // Start animation immediately
-    console.log("b");
-    intervalId = setInterval(moveCameraToNextPhoto, 7000); // 7 seconds
+    console.log("Slideshow started");
+
+    moveCameraToNextPhoto(); // ✅ Start animation immediately
+    intervalId = setInterval(() => {
+        console.log("Calling moveCameraToNextPhoto...");
+        moveCameraToNextPhoto();
+    }, 6000);
 
     document.getElementById("start-btn").disabled = true;
     document.getElementById("stop-btn").disabled = false;
 }
+
 
 function stopSlideshow() {
     clearInterval(intervalId);
