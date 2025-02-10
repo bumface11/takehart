@@ -45,70 +45,149 @@ async function init3DScene() {
         return;
     }
 
+ 
+
     // Create Three.js scene
     scene = new THREE.Scene();
 
     // Camera setup
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0, 10);
+    camera.position.set(0, 0, 3);  // ✅ Keep camera zoomed in
 
     // Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Handle window resizing
-    window.addEventListener("resize", () => {
-        if (camera && renderer) {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-    });
-
     // Load wall texture
     const textureLoader = new THREE.TextureLoader();
     const wallTexture = textureLoader.load("images/wall-texture.jpg");
-    const wallGeometry = new THREE.PlaneGeometry(50, 30);
-    const wallMaterial = new THREE.MeshBasicMaterial({ map: wallTexture });
-    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    const wall = new THREE.Mesh(
+        new THREE.PlaneGeometry(50, 30),
+        new THREE.MeshBasicMaterial({ map: wallTexture })
+    );
     wall.position.set(0, 0, -5);
     scene.add(wall);
 
     // Define grid layout
-    const cols = Math.ceil(Math.sqrt(images.length)); // Number of columns
-    const rows = Math.ceil(images.length / cols);    // Number of rows
-    const spacingX = 5; // Horizontal spacing
-    const spacingY = 4; // Vertical spacing
+    const cols = Math.ceil(Math.sqrt(images.length));
+    const rows = Math.ceil(images.length / cols);
+    const spacingX = 6, spacingY = 5;
     const startX = -(cols / 2) * spacingX + spacingX / 2;
     const startY = (rows / 2) * spacingY - spacingY / 2;
 
-    const planeGeometry = new THREE.PlaneGeometry(4, 3);
+    function addPins(x, y, width, height) {
+        const pinGeometry = new THREE.SphereGeometry(0.1, 16, 16); // Small sphere
+        const pinMaterial = new THREE.MeshBasicMaterial({ color: "#aa0000" }); // Red push pin color
     
+        const topLeft = new THREE.Mesh(pinGeometry, pinMaterial);
+        topLeft.position.set(x - width / 2 + 0.1, y + height / 2 - 0.1, 0.3);
+    
+        const topRight = new THREE.Mesh(pinGeometry, pinMaterial);
+        topRight.position.set(x + width / 2 - 0.1, y + height / 2 - 0.1, 0.3);
+    
+        scene.add(topLeft, topRight);
+    }
+
+    function addCaption(x, y, text) {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+    
+        // ✅ Set font and measure text width
+        ctx.font = "italic 24px 'Dancing Script', cursive";
+        let textWidth = ctx.measureText(text).width;
+    
+        // ✅ Ensure the caption is not too wide
+        const maxWidth = 6; // Max width in world units
+        const scaleFactor = maxWidth / textWidth;
+        textWidth = Math.min(textWidth, maxWidth);
+    
+        // ✅ Set canvas size dynamically based on text
+        canvas.width = Math.ceil(textWidth * 50);
+        canvas.height = 100;
+    
+        // ✅ Background color (paper effect)
+        ctx.fillStyle = "#f9f3d7"; // Light beige paper color
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+        // ✅ Add slight border shadow
+        ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+        ctx.shadowBlur = 10;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#e3d9b6";
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+    
+        // ✅ Text styling
+        ctx.fillStyle = "#222"; // Dark ink color
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = "italic 24px 'Dancing Script', cursive"; // Handwritten effect
+        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    
+        // ✅ Convert to texture
+        const captionTexture = new THREE.CanvasTexture(canvas);
+        captionTexture.needsUpdate = true;
+    
+        const captionMaterial = new THREE.MeshBasicMaterial({ map: captionTexture, transparent: true });
+        const captionPlane = new THREE.Mesh(
+            new THREE.PlaneGeometry(textWidth, 1),
+            captionMaterial
+        );
+    
+        captionPlane.position.set(x, y, 0.1); // ✅ Slightly in front of the image
+        scene.add(captionPlane);
+    }
+    
+    
+
     for (let i = 0; i < images.length; i++) {
         const dataUrl = await convertToDataURL(images[i].src);
         if (!dataUrl) continue;
 
-        const imageTexture = textureLoader.load(dataUrl, (texture) => {
+        textureLoader.load(dataUrl, (texture) => {
             console.log(`Image ${i + 1} loaded from Data URL`);
-            texture.minFilter = THREE.LinearFilter;
-            texture.generateMipmaps = false;
-
+        
+            // ✅ Keep the correct aspect ratio
+            const imgWidth = texture.image.width;
+            const imgHeight = texture.image.height;
+            const aspectRatio = imgWidth / imgHeight;
+        
+            const planeWidth = 4 * aspectRatio;
+            const planeHeight = 4;
+        
             const material = new THREE.MeshBasicMaterial({ map: texture });
-            const plane = new THREE.Mesh(planeGeometry, material);
-
-            // Calculate grid position
-            const x = startX + (i % cols) * spacingX;
-            const y = startY - Math.floor(i / cols) * spacingY;
-
-            plane.position.set(x, y, 0);
+        
+            // ✅ Image Plane (Pinned Photo)
+            const plane = new THREE.Mesh(new THREE.PlaneGeometry(planeWidth, planeHeight), material);
+        
+            // ✅ Random slight rotation to make it look "pinned"
+            const rotationAngle = (Math.random() - 0.5) * 0.2; // Random rotation between -0.1 and 0.1 radians
+            plane.rotation.z = rotationAngle;
+        
+            // ✅ Push the image forward slightly to avoid z-fighting
+            plane.position.set(x, y, 0.2);
+        
+            // ✅ Add a shadow-like frame behind the image
+            const shadowMaterial = new THREE.MeshBasicMaterial({ color: "#000", opacity: 0.2, transparent: true });
+            const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(planeWidth + 0.3, planeHeight + 0.3), shadowMaterial);
+            shadowPlane.position.set(x, y, 0.1); // Slightly behind the image
+            scene.add(shadowPlane);
+        
+            // ✅ Add "pins" (small spheres)
+            addPins(x, y, planeWidth, planeHeight);
+        
             scene.add(plane);
             photoPlanes.push(plane);
+        
+            // ✅ Add caption below the image
+            addCaption(x, y - (planeHeight / 2) - 0.5, images[i].caption);
         });
+        
     }
 
     animate();
 }
+
 
 
 function animate() {
@@ -120,8 +199,10 @@ function animate() {
 let animationLoopStarted = false; // Flag to track if the loop is running
 
 
-let animationState = "idle"; // "zoomingIn", "paused", "zoomingOut", "moving"
+//let animationState = "idle"; // "zoomingIn", "paused", "zoomingOut", "moving"
 let animationProgress = 0;
+
+let animationState = "moving";
 let animationStart = null;
 const animationDuration = 2000; // 2 seconds per movement
 
@@ -129,12 +210,10 @@ function moveCameraToNextPhoto(timestamp) {
     if (!animationStart) animationStart = timestamp;
     let progress = (timestamp - animationStart) / animationDuration;
 
-    if (animationState === "zoomingIn") {
-        camera.position.z += (3 - camera.position.z) * 0.1;  // ✅ Manual Lerp
-    } else if (animationState === "zoomingOut") {
-        camera.position.z += (8 - camera.position.z) * 0.1;  // ✅ Manual Lerp
-    } else if (animationState === "moving") {
+    if (animationState === "moving") {
         const target = photoPlanes[currentIndex].position;
+
+        // ✅ Stay zoomed in at z=3, only pan
         camera.position.x += (target.x - camera.position.x) * 0.1;
         camera.position.y += (target.y - camera.position.y) * 0.1;
     }
@@ -142,20 +221,9 @@ function moveCameraToNextPhoto(timestamp) {
     if (progress >= 1) {
         animationStart = null;
 
-        if (animationState === "zoomingIn") {
-            animationState = "paused";
-            setTimeout(() => {
-                animationState = "zoomingOut";
-                requestAnimationFrame(moveCameraToNextPhoto);
-            }, 1000);
-        } else if (animationState === "zoomingOut") {
-            animationState = "moving";
-            requestAnimationFrame(moveCameraToNextPhoto);
-        } else if (animationState === "moving") {
-            animationState = "zoomingIn";
-            currentIndex = (currentIndex + 1) % photoPlanes.length;
-            requestAnimationFrame(moveCameraToNextPhoto);
-        }
+        animationState = "moving";
+        currentIndex = (currentIndex + 1) % photoPlanes.length;
+        requestAnimationFrame(moveCameraToNextPhoto);
     } else {
         requestAnimationFrame(moveCameraToNextPhoto);
     }
@@ -174,24 +242,23 @@ function animate() {
 }
 
 function startSlideshow() {
-    console.log(THREE.REVISION);
-
     if (photoPlanes.length === 0) {
         alert("No images loaded. Try refreshing the extension.");
         return;
     }
 
     console.log("Slideshow started");
-    
+
     currentIndex = 0;
-    animationState = "zoomingIn";
+    animationState = "moving";
     animationStart = null;
-    
+
     requestAnimationFrame(moveCameraToNextPhoto);
 
     document.getElementById("start-btn").disabled = true;
     document.getElementById("stop-btn").disabled = false;
 }
+
 
 
 function stopSlideshow() {
