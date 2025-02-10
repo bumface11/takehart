@@ -113,69 +113,81 @@ async function init3DScene() {
 
 function animate() {
     requestAnimationFrame(animate);
-    TWEEN.update();
     console.log("Animation frame running...");  // ✅ Should print continuously
     renderer.render(scene, camera);
 }
 
+let animationLoopStarted = false; // Flag to track if the loop is running
 
-function moveCameraToNextPhoto() {
-    if (photoPlanes.length === 0 || isTransitioning) return;
-    isTransitioning = true;
 
-    console.log("Starting animation for image:", currentIndex);
+let animationState = "idle"; // "zoomingIn", "paused", "zoomingOut", "moving"
+let animationProgress = 0;
+let animationStart = null;
+const animationDuration = 2000; // 2 seconds per movement
 
-    if (currentIndex >= photoPlanes.length) {
-        currentIndex = 0; // Restart slideshow
+function moveCameraToNextPhoto(timestamp) {
+    if (!animationStart) animationStart = timestamp;
+    let progress = (timestamp - animationStart) / animationDuration;
+
+    if (animationState === "zoomingIn") {
+        camera.position.z += (3 - camera.position.z) * 0.1;  // ✅ Manual Lerp
+    } else if (animationState === "zoomingOut") {
+        camera.position.z += (8 - camera.position.z) * 0.1;  // ✅ Manual Lerp
+    } else if (animationState === "moving") {
+        const target = photoPlanes[currentIndex].position;
+        camera.position.x += (target.x - camera.position.x) * 0.1;
+        camera.position.y += (target.y - camera.position.y) * 0.1;
     }
 
-    const target = photoPlanes[currentIndex].position;
+    if (progress >= 1) {
+        animationStart = null;
 
-    // Step 1: Zoom in
-    new TWEEN.Tween(camera.position)
-        .to({ x: target.x, y: target.y, z: 3 }, 2000)
-        .easing(TWEEN.Easing.Quadratic.Out)
-        .onStart(() => console.log("Zoom in started"))
-        .onUpdate(() => console.log("Zooming... Camera position:", camera.position))
-        .onComplete(() => {
-            console.log("Zoom in complete");
-
-            // Step 2: Pause before panning
+        if (animationState === "zoomingIn") {
+            animationState = "paused";
             setTimeout(() => {
-                console.log("Starting pan to next image...");
-
-                // Step 3: Pan to the next image
-                new TWEEN.Tween(camera.position)
-                    .to({ x: target.x, y: target.y, z: 8 }, 2000)
-                    .easing(TWEEN.Easing.Quadratic.Out)
-                    .onStart(() => console.log("Panning started"))
-                    .onUpdate(() => console.log("Panning... Camera position:", camera.position))
-                    .onComplete(() => {
-                        console.log("Panning complete");
-                        isTransitioning = false;
-                    })
-                    .start();
-            }, 1000); // Pause for 1 second before panning
-        })
-        .start();
-
-    currentIndex++;
+                animationState = "zoomingOut";
+                requestAnimationFrame(moveCameraToNextPhoto);
+            }, 1000);
+        } else if (animationState === "zoomingOut") {
+            animationState = "moving";
+            requestAnimationFrame(moveCameraToNextPhoto);
+        } else if (animationState === "moving") {
+            animationState = "zoomingIn";
+            currentIndex = (currentIndex + 1) % photoPlanes.length;
+            requestAnimationFrame(moveCameraToNextPhoto);
+        }
+    } else {
+        requestAnimationFrame(moveCameraToNextPhoto);
+    }
 }
 
+function animate() {
+    requestAnimationFrame(animate);  // Call animate again for the next frame
+    TWEEN.update();
+    renderer.render(scene, camera);
+
+    // Check if animation should start *after* the loop is running:
+    if (photoPlanes.length > 0 && !isTransitioning && !animationLoopStarted) {
+      animationLoopStarted = true;
+      moveCameraToNextPhoto(); // Now call it here!
+    }
+}
 
 function startSlideshow() {
+    console.log(THREE.REVISION);
+
     if (photoPlanes.length === 0) {
         alert("No images loaded. Try refreshing the extension.");
         return;
     }
 
     console.log("Slideshow started");
-
-    moveCameraToNextPhoto(); // ✅ Start animation immediately
-    intervalId = setInterval(() => {
-        console.log("Calling moveCameraToNextPhoto...");
-        moveCameraToNextPhoto();
-    }, 6000);
+    
+    currentIndex = 0;
+    animationState = "zoomingIn";
+    animationStart = null;
+    
+    requestAnimationFrame(moveCameraToNextPhoto);
 
     document.getElementById("start-btn").disabled = true;
     document.getElementById("stop-btn").disabled = false;
@@ -183,10 +195,8 @@ function startSlideshow() {
 
 
 function stopSlideshow() {
-    clearInterval(intervalId);
-    intervalId = null; // Clear intervalId
-    isTransitioning = false; // Reset isTransitioning
+    isTransitioning = false;
+    animationLoopStarted = false; // Reset the flag
     document.getElementById("start-btn").disabled = false;
     document.getElementById("stop-btn").disabled = true;
 }
-
