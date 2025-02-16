@@ -52,7 +52,7 @@ async function init3DScene() {
 
     // Camera setup
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0, 3);  // ✅ Keep camera zoomed in
+    camera.position.set(0, 0, 4);  // ✅ Keep camera zoomed in
 
     // Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -76,68 +76,51 @@ async function init3DScene() {
     const startX = -(cols / 2) * spacingX + spacingX / 2;
     const startY = (rows / 2) * spacingY - spacingY / 2;
 
-    function addPins(x, y, width, height) {
-        const pinGeometry = new THREE.SphereGeometry(0.1, 16, 16); // Small sphere
-        const pinMaterial = new THREE.MeshBasicMaterial({ color: "#aa0000" }); // Red push pin color
-    
-        const topLeft = new THREE.Mesh(pinGeometry, pinMaterial);
-        topLeft.position.set(x - width / 2 + 0.1, y + height / 2 - 0.1, 0.3);
-    
-        const topRight = new THREE.Mesh(pinGeometry, pinMaterial);
-        topRight.position.set(x + width / 2 - 0.1, y + height / 2 - 0.1, 0.3);
-    
-        scene.add(topLeft, topRight);
-    }
 
+    
     function addCaption(x, y, text) {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
     
-        // ✅ Set font and measure text width
-        ctx.font = "italic 24px 'Dancing Script', cursive";
-        let textWidth = ctx.measureText(text).width;
-    
-        // ✅ Ensure the caption is not too wide
-        const maxWidth = 6; // Max width in world units
-        const scaleFactor = maxWidth / textWidth;
-        textWidth = Math.min(textWidth, maxWidth);
-    
-        // ✅ Set canvas size dynamically based on text
-        canvas.width = Math.ceil(textWidth * 50);
-        canvas.height = 100;
-    
-        // ✅ Background color (paper effect)
-        ctx.fillStyle = "#f9f3d7"; // Light beige paper color
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-        // ✅ Add slight border shadow
-        ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
-        ctx.shadowBlur = 10;
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#e3d9b6";
-        ctx.strokeRect(0, 0, canvas.width, canvas.height);
-    
-        // ✅ Text styling
-        ctx.fillStyle = "#222"; // Dark ink color
-        ctx.textAlign = "center";
+        const padding = 20; const fontSize = 12;
+
+        // Set temporary font to measure text
+         ctx.font = `italic bold ${fontSize}px "Dancing Script", cursive`;
+         const textMetrics = ctx.measureText(text); 
+         const textWidth = Math.ceil(textMetrics.width) + padding; 
+         const textHeight = fontSize + padding;
+        
+        // Set canvas dimensions (this resets the drawing state) 
+        canvas.width = textWidth; canvas.height = textHeight;
+        
+        // Reapply font settings after resizing 
+        ctx.font = `italic bold ${fontSize}px "Dancing Script", cursive`; 
+        ctx.textAlign = "center"; 
         ctx.textBaseline = "middle";
-        ctx.font = "italic 24px 'Dancing Script', cursive"; // Handwritten effect
-        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-    
-        // ✅ Convert to texture
-        const captionTexture = new THREE.CanvasTexture(canvas);
-        captionTexture.needsUpdate = true;
-    
-        const captionMaterial = new THREE.MeshBasicMaterial({ map: captionTexture, transparent: true });
-        const captionPlane = new THREE.Mesh(
-            new THREE.PlaneGeometry(textWidth, 1),
-            captionMaterial
-        );
-    
-        captionPlane.position.set(x, y, 0.1); // ✅ Slightly in front of the image
-        scene.add(captionPlane);
+        
+        // Draw a paper-like background 
+        ctx.fillStyle = "#fdf7e3"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw a soft border 
+        ctx.strokeStyle = "#e0d5b9"; ctx.lineWidth = 2; ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw the caption text 
+        ctx.fillStyle = "black"; ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+        
+        // Convert canvas to texture 
+        const captionTexture = new THREE.CanvasTexture(canvas); captionTexture.minFilter = THREE.LinearFilter;
+        
+        // Create a material that disables depth testing so it always appears on top 
+        const captionMaterial = new THREE.MeshBasicMaterial({ map: captionTexture, transparent: true, depthTest: false });
+        
+        // Force render order so captions are drawn after images 
+        const captionPlane = new THREE.Mesh( new THREE.PlaneGeometry(textWidth / 100, textHeight / 100), captionMaterial ); captionPlane.renderOrder = 1;
+        
+        // Position the caption so that it appears just below the image. // (Adjust the offset as needed; here we subtract a small extra value so it sits clearly in front.) 
+        captionPlane.position.set(x, y - (textHeight / 100) / 2 - 0.1, 0.01); 
+        scene.add(captionPlane); 
+        
     }
-    
     
 
     for (let i = 0; i < images.length; i++) {
@@ -146,43 +129,31 @@ async function init3DScene() {
 
         textureLoader.load(dataUrl, (texture) => {
             console.log(`Image ${i + 1} loaded from Data URL`);
-        
-            // ✅ Keep the correct aspect ratio
+
+            // ✅ Get the correct aspect ratio
             const imgWidth = texture.image.width;
             const imgHeight = texture.image.height;
             const aspectRatio = imgWidth / imgHeight;
-        
-            const planeWidth = 4 * aspectRatio;
-            const planeHeight = 4;
-        
+
+            const planeWidth = 4 * aspectRatio;  // ✅ Adjust width dynamically
+            const planeHeight = 4;  // ✅ Fixed height
+
             const material = new THREE.MeshBasicMaterial({ map: texture });
-        
-            // ✅ Image Plane (Pinned Photo)
             const plane = new THREE.Mesh(new THREE.PlaneGeometry(planeWidth, planeHeight), material);
-        
-            // ✅ Random slight rotation to make it look "pinned"
-            const rotationAngle = (Math.random() - 0.5) * 0.2; // Random rotation between -0.1 and 0.1 radians
-            plane.rotation.z = rotationAngle;
-        
-            // ✅ Push the image forward slightly to avoid z-fighting
-            plane.position.set(x, y, 0.2);
-        
-            // ✅ Add a shadow-like frame behind the image
-            const shadowMaterial = new THREE.MeshBasicMaterial({ color: "#000", opacity: 0.2, transparent: true });
-            const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(planeWidth + 0.3, planeHeight + 0.3), shadowMaterial);
-            shadowPlane.position.set(x, y, 0.1); // Slightly behind the image
-            scene.add(shadowPlane);
-        
-            // ✅ Add "pins" (small spheres)
-            addPins(x, y, planeWidth, planeHeight);
-        
+
+            // ✅ Position in a grid layout
+            const x = startX + (i % cols) * spacingX;
+            const y = startY - Math.floor(i / cols) * spacingY;
+            plane.position.set(x, y, 0);
             scene.add(plane);
             photoPlanes.push(plane);
-        
+
             // ✅ Add caption below the image
-            addCaption(x, y - (planeHeight / 2) - 0.5, images[i].caption);
+            const captionY = y - (planeHeight / 2) - 0.2;  // ✅ Slightly closer to the image
+            addCaption(x, captionY, images[i].caption);
+            
+
         });
-        
     }
 
     animate();
@@ -210,24 +181,22 @@ function moveCameraToNextPhoto(timestamp) {
     if (!animationStart) animationStart = timestamp;
     let progress = (timestamp - animationStart) / animationDuration;
 
-    if (animationState === "moving") {
-        const target = photoPlanes[currentIndex].position;
+    if (photoPlanes.length === 0) return;
 
-        // ✅ Stay zoomed in at z=3, only pan
-        camera.position.x += (target.x - camera.position.x) * 0.1;
-        camera.position.y += (target.y - camera.position.y) * 0.1;
-    }
+    // ✅ Stay zoomed in, only move X & Y
+    const target = photoPlanes[currentIndex].position;
+    camera.position.x += (target.x - camera.position.x) * 0.1;
+    camera.position.y += (target.y - camera.position.y) * 0.1;
 
     if (progress >= 1) {
         animationStart = null;
-
-        animationState = "moving";
         currentIndex = (currentIndex + 1) % photoPlanes.length;
         requestAnimationFrame(moveCameraToNextPhoto);
     } else {
         requestAnimationFrame(moveCameraToNextPhoto);
     }
 }
+
 
 function animate() {
     requestAnimationFrame(animate);  // Call animate again for the next frame
