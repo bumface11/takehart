@@ -1,5 +1,7 @@
 console.log("✅ slideshow.js is running");
 debugger; // Forces Chrome to pause when the script starts
+const zoomDelayBeforeStart = 5000;  // ✅ Adjustable delay before zooming in (in milliseconds)
+
 
 let scene, camera, renderer;
 let photoPlanes = [];
@@ -71,9 +73,9 @@ async function init3DScene() {
     scene.add(ambientLight);
     
 
-    // Camera setup
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0, 4);  // ✅ Keep camera zoomed in
+    // Camera setup: Start with a wide view
+    camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 15);  // ✅ Zoom out initially to see all images
 
     // Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -300,7 +302,7 @@ let animationProgress = 0;
 
 let animationState = "moving";
 let animationStart = null;
-const animationDuration = 2000; // 2 seconds per movement
+const animationDuration = 5000; // 5 seconds per movement
 
 function moveCameraToNextPhoto(timestamp) {
     if (!animationStart) animationStart = timestamp;
@@ -308,19 +310,33 @@ function moveCameraToNextPhoto(timestamp) {
 
     if (photoPlanes.length === 0) return;
 
-    // ✅ Stay zoomed in, only move X & Y
     const target = photoPlanes[currentIndex].position;
+
+    // ✅ Get image size from current index
+    const currentImageGroup = photoPlanes[currentIndex];
+    let imageHeight = 4;  // Default image height
+    let captionHeight = 1.5;  // Approximate caption height
+    let totalHeight = imageHeight + captionHeight + 1; // Extra padding for spacing
+
+    // ✅ Adjust zoom based on image + caption height
+    let idealZoom = totalHeight * 1.2;  // Multiplier for extra margin
+    camera.position.z += (idealZoom - camera.position.z) * 0.05;  // Smooth zooming
+
+    // ✅ Move camera to the next image smoothly
     camera.position.x += (target.x - camera.position.x) * 0.1;
     camera.position.y += (target.y - camera.position.y) * 0.1;
 
     if (progress >= 1) {
         animationStart = null;
         currentIndex = (currentIndex + 1) % photoPlanes.length;
-        requestAnimationFrame(moveCameraToNextPhoto);
+        setTimeout(() => {
+            requestAnimationFrame(moveCameraToNextPhoto);
+        }, 1000);  // ✅ Pause for 5 seconds before moving to next image
     } else {
         requestAnimationFrame(moveCameraToNextPhoto);
     }
 }
+
 
 
 function animate() {
@@ -343,17 +359,24 @@ function startSlideshow() {
         return;
     }
 
-    console.log("Slideshow started");
+    console.log(`Slideshow started - Showing full gallery for ${zoomDelayBeforeStart / 1000} seconds`);
 
     currentIndex = 0;
-    animationState = "moving";
+    animationState = "waiting";  // ✅ New state to prevent early animation
     animationStart = null;
 
-    requestAnimationFrame(moveCameraToNextPhoto);
+    // ✅ Delay the camera movement
+    setTimeout(() => {
+        console.log("Zooming into first image...");
+        animationState = "moving";  // ✅ Change state so movement can start
+        requestAnimationFrame(moveCameraToNextPhoto);
+    }, zoomDelayBeforeStart);  // ✅ Uses the configurable delay
 
     document.getElementById("start-btn").disabled = true;
     document.getElementById("stop-btn").disabled = false;
 }
+
+
 
 
 
