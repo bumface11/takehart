@@ -18,7 +18,13 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.bbc.co.uk/news/articles/*"],
+      "matches":  [
+        "https://www.bbc.co.uk/news/articles/*",
+        "https://bbc.co.uk/news/articles/*",
+        "https://www.bbc.com/news/articles/*",
+        "https://bbc.com/news/articles/*",
+        "https://www.bbc.co.uk/news/*"
+      ],
       "js": ["content.js"]
     }
   ],

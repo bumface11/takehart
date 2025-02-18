@@ -1,3 +1,6 @@
+console.log("✅ slideshow.js is running");
+debugger; // Forces Chrome to pause when the script starts
+
 let scene, camera, renderer;
 let photoPlanes = [];
 let images = [];
@@ -49,6 +52,24 @@ async function init3DScene() {
 
     // Create Three.js scene
     scene = new THREE.Scene();
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(3, 5, 5);  // ✅ Closer and angled towards the wall
+    light.castShadow = true;
+    scene.add(light);
+    
+    // ✅ Configure shadow properties for better visibility
+    light.shadow.mapSize.width = 2048;
+    light.shadow.mapSize.height = 2048;
+    light.shadow.camera.near = 0.1;
+    light.shadow.camera.far = 50;
+    light.shadow.camera.left = -10;
+    light.shadow.camera.right = 10;
+    light.shadow.camera.top = 10;
+    light.shadow.camera.bottom = -10;
+    
+    const ambientLight = new THREE.AmbientLight(0x888888, 0.5);
+    scene.add(ambientLight);
+    
 
     // Camera setup
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -57,104 +78,199 @@ async function init3DScene() {
     // Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
     document.body.appendChild(renderer.domElement);
 
     // Load wall texture
     const textureLoader = new THREE.TextureLoader();
     const wallTexture = textureLoader.load("images/wall-texture.jpg");
-    const wall = new THREE.Mesh(
-        new THREE.PlaneGeometry(50, 30),
-        new THREE.MeshBasicMaterial({ map: wallTexture })
-    );
+    const wallMaterial = new THREE.MeshLambertMaterial({ map: wallTexture });
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(50, 30), wallMaterial);
+    
+    // ✅ Ensure the wall receives shadows
+    wall.receiveShadow = true;
+    
     wall.position.set(0, 0, -5);
     scene.add(wall);
+    
 
     // Define grid layout
     const cols = Math.ceil(Math.sqrt(images.length));
-    const rows = Math.ceil(images.length / cols);
+    const rows1 = Math.ceil(images.length / cols);
     const spacingX = 6, spacingY = 5;
     const startX = -(cols / 2) * spacingX + spacingX / 2;
-    const startY = (rows / 2) * spacingY - spacingY / 2;
+    const startY = (rows1 / 2) * spacingY - spacingY / 2;
 
 
     
-    function addCaption(x, y, text) {
+    function addCaption(x, y, text, photoWidth) {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
     
-        const padding = 20; const fontSize = 12;
-
-        // Set temporary font to measure text
-         ctx.font = `italic bold ${fontSize}px "Dancing Script", cursive`;
-         const textMetrics = ctx.measureText(text); 
-         const textWidth = Math.ceil(textMetrics.width) + padding; 
-         const textHeight = fontSize + padding;
-        
-        // Set canvas dimensions (this resets the drawing state) 
-        canvas.width = textWidth; canvas.height = textHeight;
-        
-        // Reapply font settings after resizing 
-        ctx.font = `italic bold ${fontSize}px "Dancing Script", cursive`; 
-        ctx.textAlign = "center"; 
+        let padding = 10;
+        let fontSize = 14;
+    
+        // ✅ Set max width slightly smaller than the image
+        let maxTextWidth = photoWidth * 75; 
+    
+        // Set font for measurement
+        ctx.font = `italic bold ${fontSize}px "Dancing Script", cursive`;
+    
+        // ✅ Word-wrap function to prevent long captions
+        function wrapText(ctx, text, maxWidth) {
+            let words = text.split(" ");
+            let lines = [];
+            let line = "";
+    
+            for (let word of words) {
+                let testLine = line + word + " ";
+                let metrics = ctx.measureText(testLine);
+                if (metrics.width > maxWidth && line.length > 0) {
+                    lines.push(line);
+                    line = word + " ";
+                } else {
+                    line = testLine;
+                }
+            }
+            lines.push(line);
+            return lines;
+        }
+    
+        // ✅ Apply word wrapping
+        let wrappedLines = wrapText(ctx, text, maxTextWidth);
+        let textHeight = (wrappedLines.length * fontSize) + padding;
+    
+        // ✅ Dynamically adjust canvas size
+        canvas.width = maxTextWidth + padding;
+        canvas.height = textHeight + padding;
+    
+        // ✅ Reapply font after canvas resize
+        ctx.font = `italic bold ${fontSize}px "Dancing Script", cursive`;
+        ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        
-        // Draw a paper-like background 
-        ctx.fillStyle = "#fdf7e3"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw a soft border 
-        ctx.strokeStyle = "#e0d5b9"; ctx.lineWidth = 2; ctx.strokeRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw the caption text 
-        ctx.fillStyle = "black"; ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-        
-        // Convert canvas to texture 
-        const captionTexture = new THREE.CanvasTexture(canvas); captionTexture.minFilter = THREE.LinearFilter;
-        
-        // Create a material that disables depth testing so it always appears on top 
-        const captionMaterial = new THREE.MeshBasicMaterial({ map: captionTexture, transparent: true, depthTest: false });
-        
-        // Force render order so captions are drawn after images 
-        const captionPlane = new THREE.Mesh( new THREE.PlaneGeometry(textWidth / 100, textHeight / 100), captionMaterial ); captionPlane.renderOrder = 1;
-        
-        // Position the caption so that it appears just below the image. // (Adjust the offset as needed; here we subtract a small extra value so it sits clearly in front.) 
-        captionPlane.position.set(x, y - (textHeight / 100) / 2 - 0.1, 0.01); 
-        scene.add(captionPlane); 
-        
+    
+        // ✅ Draw background "paper"
+        ctx.fillStyle = "#fdf7e3";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+        // ✅ Draw soft border
+        ctx.strokeStyle = "#e0d5b9";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+    
+        // ✅ Draw wrapped text, line by line
+        ctx.fillStyle = "black";
+        let textY = padding;
+        for (let line of wrappedLines) {
+            ctx.fillText(line, canvas.width / 2, textY);
+            textY += fontSize;
+        }
+    
+        // ✅ Convert to Three.js texture
+        const captionTexture = new THREE.CanvasTexture(canvas);
+        captionTexture.minFilter = THREE.LinearFilter;
+    
+        const captionMaterial = new THREE.MeshLambertMaterial({
+            map: captionTexture,
+            transparent: true,
+            depthTest: false
+        });
+    
+        // ✅ Scale dynamically based on text size
+        let planeWidth = canvas.width / 100;
+        let planeHeight = canvas.height / 100;
+    
+        // ✅ Position caption **just below the image**
+        const captionPlane = new THREE.Mesh(new THREE.PlaneGeometry(planeWidth, planeHeight), captionMaterial);
+        captionPlane.position.set(x, y - (planeHeight / 2) - 0.1, 0.01); // Adjust for better visibility
+        scene.add(captionPlane);
     }
     
+    
+    // Define layout variables
+    let rowWidths = []; // Stores total width per row to prevent overlaps
+    const rowHeights = []; // Keeps track of row heights
 
-    for (let i = 0; i < images.length; i++) {
-        const dataUrl = await convertToDataURL(images[i].src);
-        if (!dataUrl) continue;
+    let maxRowHeight = 0;
+    let rowImages = [];  // Stores images in the current row
+// Define row tracking variables
+let rows = [];  // Stores each row's images
+let currentRowWidth = 0;
+let currentRow = 0;
+let maxRowWidth = 20; // Max width before moving to a new row
+let yOffset = 0; // Tracks vertical position of rows
 
-        textureLoader.load(dataUrl, (texture) => {
-            console.log(`Image ${i + 1} loaded from Data URL`);
+for (let i = 0; i < images.length; i++) {
+    const dataUrl = await convertToDataURL(images[i].src);
+    if (!dataUrl) continue;
 
-            // ✅ Get the correct aspect ratio
-            const imgWidth = texture.image.width;
-            const imgHeight = texture.image.height;
-            const aspectRatio = imgWidth / imgHeight;
+    textureLoader.load(dataUrl, (texture) => {
+        console.log(`Image ${i + 1} loaded from Data URL`);
 
-            const planeWidth = 4 * aspectRatio;  // ✅ Adjust width dynamically
-            const planeHeight = 4;  // ✅ Fixed height
+        // ✅ Get the correct aspect ratio
+        const imgWidth = texture.image.width;
+        const imgHeight = texture.image.height;
+        const aspectRatio = imgWidth / imgHeight;
 
-            const material = new THREE.MeshBasicMaterial({ map: texture });
-            const plane = new THREE.Mesh(new THREE.PlaneGeometry(planeWidth, planeHeight), material);
+        const planeWidth = 4 * aspectRatio;  // ✅ Adjust width dynamically
+        const planeHeight = 4;  // ✅ Fixed height
 
-            // ✅ Position in a grid layout
-            const x = startX + (i % cols) * spacingX;
-            const y = startY - Math.floor(i / cols) * spacingY;
-            plane.position.set(x, y, 0);
-            scene.add(plane);
-            photoPlanes.push(plane);
+        const material = new THREE.MeshLambertMaterial({ map: texture });
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(planeWidth, planeHeight), material);
 
-            // ✅ Add caption below the image
-            const captionY = y - (planeHeight / 2) - 0.2;  // ✅ Slightly closer to the image
-            addCaption(x, captionY, images[i].caption);
-            
+        // ✅ Enable shadows
+        plane.castShadow = true;
+        plane.receiveShadow = true;
 
+        // ✅ Tilt the image slightly for a "pinned" effect
+        plane.rotation.z = (Math.random() - 0.5) * 0.02;
+
+        // ✅ Start a new row if adding this image would exceed the max width
+        if (currentRowWidth + planeWidth > maxRowWidth) {
+            console.log(`Starting new row ${currentRow + 1}`);
+            currentRow++;
+            currentRowWidth = 0;
+            yOffset -= 6; // Move down for the next row
+        }
+
+        // ✅ Initialize row storage before adding images
+        if (!rows[currentRow]) {
+            rows[currentRow] = [];
+        }
+
+        // ✅ Calculate X position (position images one after another)
+        let x = currentRowWidth + (planeWidth / 2);
+        let y = yOffset;  // Move down for each row
+
+        // ✅ Store image in row tracking
+        rows[currentRow].push({ plane, width: planeWidth });
+
+        // ✅ Position the image
+        plane.position.set(x, y, 0);
+        scene.add(plane);
+        photoPlanes.push(plane);
+
+        // ✅ Update row width tracking
+        currentRowWidth += planeWidth + 1; // Add buffer space
+
+        // ✅ Attach **only this image’s caption**, using its exact position
+        let captionX = x;
+        let captionY = y - (planeHeight / 2) - 0.5;
+        addCaption(captionX, captionY, images[i].caption, planeWidth);
+
+        // ✅ After all images in row are loaded, adjust row centering
+        let totalRowWidth = rows[currentRow].reduce((sum, img) => sum + img.width + 1, 0);
+        let rowXOffset = -totalRowWidth / 2;
+
+        rows[currentRow].forEach(imgObj => {
+            imgObj.plane.position.x += rowXOffset;
         });
-    }
+    });
+}
+
+
 
     animate();
 }
@@ -199,6 +315,8 @@ function moveCameraToNextPhoto(timestamp) {
 
 
 function animate() {
+    console.log("Render loop running");
+
     requestAnimationFrame(animate);  // Call animate again for the next frame
     TWEEN.update();
     renderer.render(scene, camera);

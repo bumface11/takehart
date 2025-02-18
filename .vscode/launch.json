@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch BBC Page with Extension",
+            "url": "https://www.bbc.co.uk/news/articles/ce9gpjlvr5do",
+            "webRoot": "${workspaceFolder}",
+            "runtimeArgs": [
+                "--disable-extensions-except=${workspaceFolder}",
+                "--load-extension=${workspaceFolder}"
+            ]
+        }
+    ]
+}
