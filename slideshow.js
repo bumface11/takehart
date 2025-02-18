@@ -182,11 +182,13 @@ async function init3DScene() {
         let planeWidth = canvas.width / 100;
         let planeHeight = canvas.height / 100;
     
-        // ✅ Position caption **just below the image**
+        // ✅ Create a caption mesh
         const captionPlane = new THREE.Mesh(new THREE.PlaneGeometry(planeWidth, planeHeight), captionMaterial);
-        captionPlane.position.set(x, y - (planeHeight / 2) - 0.1, 0.01); // Adjust for better visibility
-        scene.add(captionPlane);
+        captionPlane.position.set(x, y, 0.01); // ✅ Position relative to the image
+    
+        return captionPlane; // ✅ Return caption so it can be added to the group
     }
+    
     
     
     // Define layout variables
@@ -240,32 +242,39 @@ for (let i = 0; i < images.length; i++) {
             rows[currentRow] = [];
         }
 
-        // ✅ Calculate X position (position images one after another)
+        // ✅ Create a group for the image and caption
+        const group = new THREE.Group();
+        
+        // ✅ Position the image at (0,0) inside the group
+        plane.position.set(0, 0, 0);
+        group.add(plane);
+
+        // ✅ Create and position the caption **relative to the image**
+        let captionY = -(planeHeight / 2) - 0.5;
+        let caption = addCaption(0, captionY, images[i].caption, planeWidth);
+        group.add(caption);
+
+        // ✅ Calculate the X position for the **entire group**
         let x = currentRowWidth + (planeWidth / 2);
-        let y = yOffset;  // Move down for each row
+        let y = yOffset;
 
-        // ✅ Store image in row tracking
-        rows[currentRow].push({ plane, width: planeWidth });
+        // ✅ Position the group (instead of separate elements)
+        group.position.set(x, y, 0);
+        scene.add(group);
+        photoPlanes.push(group);
 
-        // ✅ Position the image
-        plane.position.set(x, y, 0);
-        scene.add(plane);
-        photoPlanes.push(plane);
+        // ✅ Store the group in the row tracking
+        rows[currentRow].push({ group, width: planeWidth });
 
         // ✅ Update row width tracking
         currentRowWidth += planeWidth + 1; // Add buffer space
-
-        // ✅ Attach **only this image’s caption**, using its exact position
-        let captionX = x;
-        let captionY = y - (planeHeight / 2) - 0.5;
-        addCaption(captionX, captionY, images[i].caption, planeWidth);
 
         // ✅ After all images in row are loaded, adjust row centering
         let totalRowWidth = rows[currentRow].reduce((sum, img) => sum + img.width + 1, 0);
         let rowXOffset = -totalRowWidth / 2;
 
         rows[currentRow].forEach(imgObj => {
-            imgObj.plane.position.x += rowXOffset;
+            imgObj.group.position.x += rowXOffset;
         });
     });
 }
