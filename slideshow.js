@@ -305,6 +305,8 @@ let animationStart = null;
 const animationDuration = 5000; // 5 seconds per movement
 
 function moveCameraToNextPhoto(timestamp) {
+    if (animationState !== "moving") return;  // ✅ Prevents early execution
+
     if (!animationStart) animationStart = timestamp;
     let progress = (timestamp - animationStart) / animationDuration;
 
