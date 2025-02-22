@@ -1,6 +1,7 @@
 console.log("✅ slideshow.js is running");
 debugger; // Forces Chrome to pause when the script starts
-const zoomDelayBeforeStart = 5000;  // ✅ Adjustable delay before zooming in (in milliseconds)
+const zoomDelayBeforeStart = 20000;  // ✅ Adjustable delay before zooming in (in milliseconds)
+let zoomedIn = false;  // ✅ Tracks whether we've zoomed into the first image
 
 
 let scene, camera, renderer;
@@ -305,7 +306,7 @@ let animationStart = null;
 const animationDuration = 5000; // 5 seconds per movement
 
 function moveCameraToNextPhoto(timestamp) {
-    if (animationState !== "moving") return;  // ✅ Prevents early execution
+    // if (animationState !== "moving") return;  // ✅ Prevents early execution
 
     if (!animationStart) animationStart = timestamp;
     let progress = (timestamp - animationStart) / animationDuration;
@@ -313,6 +314,11 @@ function moveCameraToNextPhoto(timestamp) {
     if (photoPlanes.length === 0) return;
 
     const target = photoPlanes[currentIndex].position;
+
+    // ✅ Only start zooming in *after* the delay
+    if (zoomedIn) {
+        camera.position.z += (4 - camera.position.z) * 0.05;  // Smooth zoom-in
+    }
 
     // ✅ Get image size from current index
     const currentImageGroup = photoPlanes[currentIndex];
@@ -342,7 +348,7 @@ function moveCameraToNextPhoto(timestamp) {
 
 
 function animate() {
-    console.log("Render loop running");
+    // console.log("Render loop running");
 
     requestAnimationFrame(animate);  // Call animate again for the next frame
     TWEEN.update();
@@ -370,6 +376,7 @@ function startSlideshow() {
     // ✅ Delay the camera movement
     setTimeout(() => {
         console.log("Zooming into first image...");
+        zoomedIn = true;  // ✅ Now allow zooming
         animationState = "moving";  // ✅ Change state so movement can start
         requestAnimationFrame(moveCameraToNextPhoto);
     }, zoomDelayBeforeStart);  // ✅ Uses the configurable delay
