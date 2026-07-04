@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const startBtn = document.getElementById("start-btn");
     const stopBtn = document.getElementById("stop-btn");
 
+    startBtn.disabled = true;
+
     // Load images from storage
     chrome.storage.local.get("images", data => {
         if (data.images && data.images.length > 0) {
@@ -84,11 +86,14 @@ async function init3DScene() {
     const startY = (rows / 2) * spacingY - spacingY / 2;
 
     const planeGeometry = new THREE.PlaneGeometry(4, 3);
-    
+    let loadedCount = 0;
+    let expectedCount = 0;
+
     for (let i = 0; i < images.length; i++) {
         const dataUrl = await convertToDataURL(images[i].src);
         if (!dataUrl) continue;
 
+        expectedCount++;
         textureLoader.load(dataUrl, (texture) => {
             texture.minFilter = THREE.LinearFilter;
             texture.generateMipmaps = false;
@@ -103,6 +108,11 @@ async function init3DScene() {
             plane.position.set(x, y, 0);
             scene.add(plane);
             photoPlanes.push(plane);
+
+            loadedCount++;
+            if (loadedCount === expectedCount) {
+                document.getElementById("start-btn").disabled = false;
+            }
         });
     }
 
