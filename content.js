@@ -2,7 +2,7 @@ function getImagesAndCaptions() {
     let images = [];
     document.querySelectorAll("figure img").forEach(img => {
         let captionElem = img.closest("figure").querySelector("figcaption");
-        let caption = captionElem ? captionElem.innerText.trim() : "No caption available";
+        let caption = captionElem ? captionElem.textContent.trim() : "No caption available";
         images.push({ src: img.src, caption });
     });
 

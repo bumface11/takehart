@@ -89,8 +89,7 @@ async function init3DScene() {
         const dataUrl = await convertToDataURL(images[i].src);
         if (!dataUrl) continue;
 
-        const imageTexture = textureLoader.load(dataUrl, (texture) => {
-            console.log(`Image ${i + 1} loaded from Data URL`);
+        textureLoader.load(dataUrl, (texture) => {
             texture.minFilter = THREE.LinearFilter;
             texture.generateMipmaps = false;
 
@@ -124,28 +123,23 @@ function moveCameraToNextPhoto() {
 
     const targetIndex = currentIndex % photoPlanes.length;
     const target = photoPlanes[targetIndex].position;
-    console.log("0");
+
     new TWEEN.Tween(camera.position)
     .to({ x: target.x, y: target.y, z: 3 }, 2000)
     .easing(TWEEN.Easing.Quadratic.Out)
     .onComplete(() => {
-        console.log("1");
         setTimeout(() => {
-            console.log("2");
             new TWEEN.Tween(camera.position)
                 .to({ x: target.x, y: target.y, z: 8 }, 2000)
                 .easing(TWEEN.Easing.Quadratic.Out)
                 .onComplete(() => {
-                    console.log("3");
                     isTransitioning = false;
                     currentIndex++;
                 })
                 .start();
-            TWEEN.update(); // Add this line!
         }, 1000);
     })
     .start();
-TWEEN.update(); // Add this line!
 }
 
 function startSlideshow() {
@@ -153,12 +147,10 @@ function startSlideshow() {
         alert("No images loaded. Try refreshing the extension.");
         return;
     }
-console.log("a");
-    if (intervalId) clearInterval(intervalId); // Clear any existing interval
+    if (intervalId) clearInterval(intervalId);
 
-    moveCameraToNextPhoto(); // Start animation immediately
-    console.log("b");
-    intervalId = setInterval(moveCameraToNextPhoto, 7000); // 7 seconds
+    moveCameraToNextPhoto();
+    intervalId = setInterval(moveCameraToNextPhoto, 7000);
 
     document.getElementById("start-btn").disabled = true;
     document.getElementById("stop-btn").disabled = false;
