@@ -7,12 +7,17 @@
     <link rel="stylesheet" href="styles.css">
     <script src="lib/three.min.js"></script>
     <script src="lib/tween.umd.js"></script>
+    <script src="lib/jzz.min.js"></script>
+    <script src="lib/jzz-synth-tiny.min.js"></script>
+    <script src="lib/jzz-midi-smf.min.js"></script>
 </head>
 <body>
     <div id="controls">
-        <button id="start-btn">Start Slideshow</button>
-        <button id="stop-btn" disabled>Stop Slideshow</button>
+        <button id="toggle-btn" type="button" aria-pressed="false" disabled>Start Slideshow</button>
+        <button id="zoom-out-btn" type="button" disabled>View Full Gallery</button>
+        <button id="mute-btn" type="button" aria-pressed="false" disabled>Mute</button>
     </div>
+    <div id="status" role="status" aria-live="polite"></div>
     <script src="slideshow.js"></script>
 </body>
 </html>

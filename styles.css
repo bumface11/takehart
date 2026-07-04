@@ -1,6 +1,8 @@
 body {
     margin: 0;
     overflow: hidden;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    background: #0f0f0f;
 }
 
 canvas {
@@ -13,20 +15,80 @@ canvas {
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
+    display: flex;
+    gap: 8px;
 }
 
 button {
-    background: #8B4513;
+    background: #8b4513;
     color: white;
     border: none;
     padding: 10px 15px;
-    margin: 5px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 15px;
     border-radius: 5px;
+    transition: background-color 0.2s ease;
+}
+
+#toggle-btn {
+    min-width: 148px;
+    background: #7a3a12;
+}
+
+#toggle-btn.running {
+    background: #3e6a2f;
+}
+
+#zoom-out-btn {
+    background: #4d5f74;
+}
+
+#mute-btn {
+    background: #5e4e6f;
+}
+
+#mute-btn.muted {
+    background: #7a2f45;
 }
 
 button:disabled {
     background: gray;
     cursor: not-allowed;
+}
+
+button:focus-visible {
+    outline: 2px solid #ffd28f;
+    outline-offset: 2px;
+}
+
+#status {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    color: #3f3225;
+    background: rgba(247, 241, 229, 0.92);
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(108, 84, 58, 0.3);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+    font-size: 15px;
+    line-height: 1.35;
+    text-align: center;
+    min-width: 280px;
+    max-width: min(85vw, 700px);
+    max-height: 30vh;
+    overflow: auto;
+}
+
+#status.error {
+    color: #8a1f1f;
+    background: rgba(255, 231, 231, 0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button {
+        transition: none;
+    }
 }

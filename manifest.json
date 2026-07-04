@@ -1,12 +1,25 @@
 {
   "manifest_version": 3,
   "name": "BBC Slideshow 3D",
-  "version": "1.0",
+  "version": "1.1.0",
+  "version_name": "1.1.0",
   "description": "View BBC article images in a 3D gallery with smooth transitions.",
-  "permissions": ["activeTab", "storage"],
-  "host_permissions": ["https://www.bbc.co.uk/news/articles/*"],
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.bbc.co.uk/news/articles/*",
+    "https://*.bbc.co.uk/*",
+    "https://*.bbci.co.uk/*"
+  ],
   "background": {
     "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "icons": {
+    "16": "icons/gallery16.png",
+    "48": "icons/gallery48.png",
+    "128": "icons/gallery128.png"
   },
   "action": {
     "default_title": "Open 3D Slideshow",
