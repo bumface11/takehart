@@ -21,11 +21,5 @@
       "matches": ["https://www.bbc.co.uk/news/articles/*"],
       "js": ["content.js"]
     }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["lib/*.js"],
-      "matches": ["<all_urls>"]
-    }
   ]
 }

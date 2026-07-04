@@ -1,51 +1,32 @@
 body {
-    background: url('images/wall-texture.jpg') repeat;
-    background-size: cover;
-    transition: background-position 1s ease-in-out;
+    margin: 0;
     overflow: hidden;
 }
 
-/* Slideshow container */
-#slideshow {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* Pinned photo effect */
-#photo-container {
-    position: absolute;
-    width: 600px;
-    max-width: 80%;
-    height: auto;
-    background: white;
-    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
-    transform: rotate(-3deg);
-    padding: 10px;
-    text-align: center;
-    border-radius: 10px;
-    transition: transform 1s ease-in-out, opacity 0.5s ease-in-out;
-}
-
-/* Image and caption */
-#photo {
-    max-width: 100%;
-    max-height: 80vh;
+canvas {
     display: block;
-    margin: auto;
 }
 
-#caption {
-    font-family: "Dancing Script", cursive;
-    font-size: 22px;
-    background: white;
-    padding: 5px;
-    display: inline-block;
-    margin-top: 10px;
+#controls {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+button {
+    background: #8B4513;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    margin: 5px;
+    cursor: pointer;
+    font-size: 16px;
     border-radius: 5px;
-    box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.2);
-    transition: opacity 0.5s ease-in-out;
+}
+
+button:disabled {
+    background: gray;
+    cursor: not-allowed;
 }

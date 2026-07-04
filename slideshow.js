@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const startBtn = document.getElementById("start-btn");
     const stopBtn = document.getElementById("stop-btn");
 
+    startBtn.disabled = true;
+
     // Load images from storage
     chrome.storage.local.get("images", data => {
         if (data.images && data.images.length > 0) {
@@ -84,13 +86,15 @@ async function init3DScene() {
     const startY = (rows / 2) * spacingY - spacingY / 2;
 
     const planeGeometry = new THREE.PlaneGeometry(4, 3);
-    
+    let loadedCount = 0;
+    let expectedCount = 0;
+
     for (let i = 0; i < images.length; i++) {
         const dataUrl = await convertToDataURL(images[i].src);
         if (!dataUrl) continue;
 
-        const imageTexture = textureLoader.load(dataUrl, (texture) => {
-            console.log(`Image ${i + 1} loaded from Data URL`);
+        expectedCount++;
+        textureLoader.load(dataUrl, (texture) => {
             texture.minFilter = THREE.LinearFilter;
             texture.generateMipmaps = false;
 
@@ -104,6 +108,11 @@ async function init3DScene() {
             plane.position.set(x, y, 0);
             scene.add(plane);
             photoPlanes.push(plane);
+
+            loadedCount++;
+            if (loadedCount === expectedCount) {
+                document.getElementById("start-btn").disabled = false;
+            }
         });
     }
 
@@ -124,28 +133,23 @@ function moveCameraToNextPhoto() {
 
     const targetIndex = currentIndex % photoPlanes.length;
     const target = photoPlanes[targetIndex].position;
-    console.log("0");
+
     new TWEEN.Tween(camera.position)
     .to({ x: target.x, y: target.y, z: 3 }, 2000)
     .easing(TWEEN.Easing.Quadratic.Out)
     .onComplete(() => {
-        console.log("1");
         setTimeout(() => {
-            console.log("2");
             new TWEEN.Tween(camera.position)
                 .to({ x: target.x, y: target.y, z: 8 }, 2000)
                 .easing(TWEEN.Easing.Quadratic.Out)
                 .onComplete(() => {
-                    console.log("3");
                     isTransitioning = false;
                     currentIndex++;
                 })
                 .start();
-            TWEEN.update(); // Add this line!
         }, 1000);
     })
     .start();
-TWEEN.update(); // Add this line!
 }
 
 function startSlideshow() {
@@ -153,12 +157,10 @@ function startSlideshow() {
         alert("No images loaded. Try refreshing the extension.");
         return;
     }
-console.log("a");
-    if (intervalId) clearInterval(intervalId); // Clear any existing interval
+    if (intervalId) clearInterval(intervalId);
 
-    moveCameraToNextPhoto(); // Start animation immediately
-    console.log("b");
-    intervalId = setInterval(moveCameraToNextPhoto, 7000); // 7 seconds
+    moveCameraToNextPhoto();
+    intervalId = setInterval(moveCameraToNextPhoto, 7000);
 
     document.getElementById("start-btn").disabled = true;
     document.getElementById("stop-btn").disabled = false;
