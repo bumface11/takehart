@@ -65,9 +65,17 @@ let statusEl = null;
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
+const DEBUG_LOADING = true;
+const DEBUG_VISUAL_PROBE = true;
 
 document.addEventListener("DOMContentLoaded", initialize);
 window.addEventListener("beforeunload", teardown);
+
+function debugLog(...args) {
+    if (DEBUG_LOADING) {
+        console.log("[slideshow]", ...args);
+    }
+}
 
 function setStatus(message, isError = false) {
     if (!statusEl) {
@@ -124,6 +132,7 @@ function sanitizeImages(rawImages) {
         .filter((item) => item && typeof item.src === "string")
         .map((item) => ({
             src: item.src,
+            dataUrl: typeof item.dataUrl === "string" && item.dataUrl ? item.dataUrl : null,
             caption: typeof item.caption === "string" && item.caption.trim()
                 ? item.caption.replace(/^Image caption,\s*/i, "").trim()
                 : "Untitled"
@@ -142,26 +151,59 @@ function loadImagesFromStorage() {
         chrome.storage.local.get("images", (data) => {
             if (chrome.runtime.lastError) {
                 console.warn("Failed to read stored images:", chrome.runtime.lastError.message);
+                debugLog("storage read failed", chrome.runtime.lastError.message);
                 resolve([]);
                 return;
             }
-            resolve(sanitizeImages(data.images));
+
+            const sanitized = sanitizeImages(data.images);
+            debugLog("storage read", {
+                rawCount: Array.isArray(data.images) ? data.images.length : 0,
+                sanitizedCount: sanitized.length,
+                sample: sanitized.slice(0, 3).map((item) => ({
+                    src: item.src,
+                    hasDataUrl: Boolean(item.dataUrl),
+                    caption: item.caption
+                }))
+            });
+            resolve(sanitized);
         });
     });
 }
 
 function loadTexture(textureLoader, src) {
     return new Promise((resolve) => {
+        debugLog("texture load start", src.slice(0, 96));
         textureLoader.load(
             src,
             (texture) => {
                 texture.minFilter = THREE.LinearFilter;
                 texture.generateMipmaps = false;
+                debugLog("texture load success", src.slice(0, 96), {
+                    width: texture?.image?.width,
+                    height: texture?.image?.height
+                });
                 resolve(texture);
             },
             undefined,
-            () => resolve(null)
+            (error) => {
+                debugLog("texture load failed", src.slice(0, 96), error || "unknown error");
+                resolve(null);
+            }
         );
+    });
+}
+
+function convertToDataURL(imageUrl) {
+    return new Promise((resolve) => {
+        chrome.runtime.sendMessage({ type: "convertToDataURL", imageUrl }, (response) => {
+            if (chrome.runtime.lastError) {
+                resolve(null);
+                return;
+            }
+
+            resolve(typeof response?.dataUrl === "string" ? response.dataUrl : null);
+        });
     });
 }
 
@@ -202,7 +244,11 @@ function createPhotoCard(texture, caption, index) {
 
     const photo = new THREE.Mesh(
         new THREE.PlaneGeometry(photoWidth, photoHeight),
-        new THREE.MeshBasicMaterial({ map: texture })
+        new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            opacity: DEBUG_VISUAL_PROBE ? 1 : 0
+        })
     );
     photo.position.set(0, 0, 0.02);
 
@@ -215,6 +261,7 @@ function createPhotoCard(texture, caption, index) {
     card.userData.index = index;
     card.userData.frameWidth = matteWidth;
     card.userData.frameHeight = matteHeight;
+    card.userData.photoMesh = photo;
 
     return card;
 }
@@ -435,10 +482,16 @@ async function init3DScene(images) {
     teardownScene();
 
     if (!images.length) {
+        debugLog("init3DScene aborted: no images");
         return 0;
     }
 
+    debugLog("init3DScene start", { imageCount: images.length });
+
     state.scene = new THREE.Scene();
+    if (DEBUG_VISUAL_PROBE) {
+        state.scene.background = new THREE.Color(0x1f3b57);
+    }
     state.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
     state.camera.position.set(0, 0, 10);
 
@@ -452,14 +505,25 @@ async function init3DScene(images) {
     const textureLoader = new THREE.TextureLoader();
     textureLoader.setCrossOrigin("anonymous");
 
-    const wallTexture = await loadTexture(textureLoader, "images/wall-texture.jpg");
-    const wallMaterial = wallTexture
-        ? new THREE.MeshBasicMaterial({ map: wallTexture })
-        : new THREE.MeshBasicMaterial({ color: 0x202020 });
+    const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
     const wall = new THREE.Mesh(new THREE.PlaneGeometry(50, 30), wallMaterial);
     wall.position.set(0, 0, WALL_Z);
     state.scene.add(wall);
+    debugLog("wall created", { z: WALL_Z });
+
+    animate();
+
+    loadTexture(textureLoader, chrome.runtime.getURL("images/wall-texture.jpg")).then((wallTexture) => {
+        if (!wallTexture || !state.scene || !wall.material) {
+            debugLog("wall texture unavailable");
+            return;
+        }
+
+        wall.material.map = wallTexture;
+        wall.material.needsUpdate = true;
+        debugLog("wall texture applied");
+    });
 
     const cols = Math.ceil(Math.sqrt(images.length));
     const spacingX = PHOTO_SLOT_WIDTH + FRAME_BORDER + GALLERY_GAP_X;
@@ -468,9 +532,24 @@ async function init3DScene(images) {
     const rows = Math.ceil(images.length / cols);
     const startY = (rows / 2) * spacingY - spacingY / 2;
 
+    let loadedCount = 0;
+    setStatus(`Loading images... ${loadedCount}/${images.length}`);
     for (let i = 0; i < images.length; i++) {
-        const texture = await loadTexture(textureLoader, images[i].src);
+        const dataUrl = typeof images[i].dataUrl === "string" && images[i].dataUrl
+            ? images[i].dataUrl
+            : await convertToDataURL(images[i].src);
+        if (!dataUrl) {
+            debugLog("image convert failed", images[i].src);
+            loadedCount++;
+            setStatus(`Loading images... ${loadedCount}/${images.length}`);
+            continue;
+        }
+
+        const texture = await loadTexture(textureLoader, dataUrl);
         if (!texture) {
+            debugLog("image texture failed", images[i].src);
+            loadedCount++;
+            setStatus(`Loading images... ${loadedCount}/${images.length}`);
             continue;
         }
 
@@ -481,10 +560,28 @@ async function init3DScene(images) {
         card.position.set(x, y, PHOTO_BASE_Z);
         state.scene.add(card);
         state.photoPlanes.push(card);
+        loadedCount++;
+        debugLog("card added", {
+            index: i,
+            x,
+            y,
+            caption: images[i].caption,
+            imageWidth: texture?.image?.width,
+            imageHeight: texture?.image?.height
+        });
+
+        const photoMesh = card.userData.photoMesh;
+        if (!DEBUG_VISUAL_PROBE && photoMesh?.material) {
+            new TWEEN.Tween(photoMesh.material)
+                .to({ opacity: 1 }, 240)
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .start();
+        }
+
+        setStatus(`Loading images... ${loadedCount}/${images.length}`);
     }
 
     computeGalleryBounds(state.photoPlanes);
-    animate();
     return state.photoPlanes.length;
 }
 
@@ -835,18 +932,23 @@ async function initialize() {
 
     setControls({ canStart: false, isRunning: false });
     setStatus("Loading images...");
+    debugLog("initialize start");
 
     state.images = await loadImagesFromStorage();
     if (!state.images.length) {
+        debugLog("initialize no images after storage load");
         setStatus("No images found. Open a BBC article and refresh this page.", true);
         return;
     }
 
     const loadedCount = await init3DScene(state.images);
     if (!loadedCount) {
+        debugLog("initialize no cards loaded");
         setStatus("Images were found but none could be loaded.", true);
         return;
     }
+
+    debugLog("initialize complete", { loadedCount });
 
     state.isReady = true;
     setControls({ canStart: true, isRunning: false });

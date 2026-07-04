@@ -1,5 +1,12 @@
 const MAX_IMAGES = 60;
 const FALLBACK_CAPTION = "No caption available";
+const DEBUG_LOADING = true;
+
+function debugLog(...args) {
+    if (DEBUG_LOADING) {
+        console.log("[content]", ...args);
+    }
+}
 
 function isAllowedImageUrl(rawUrl) {
     try {
@@ -25,9 +32,9 @@ function normalizeCaption(value) {
     return caption || FALLBACK_CAPTION;
 }
 
-function getImagesAndCaptions() {
-    const images = [];
+async function getImagesAndCaptions() {
     const seenUrls = new Set();
+    const images = [];
 
     document.querySelectorAll("figure img").forEach((img) => {
         const src = img.currentSrc || img.src;
@@ -43,19 +50,25 @@ function getImagesAndCaptions() {
         seenUrls.add(src);
     });
 
+    debugLog("discovered images", images.length, images.slice(0, 3));
     return images.slice(0, MAX_IMAGES);
 }
 
-function saveImages(images) {
+async function saveImages(images) {
     if (!Array.isArray(images) || images.length === 0) {
+        debugLog("nothing to store");
         return;
     }
 
     chrome.storage.local.set({ images, imagesCapturedAt: Date.now() }, () => {
         if (chrome.runtime.lastError) {
             console.warn("Failed to store images:", chrome.runtime.lastError.message);
+            debugLog("store failed", chrome.runtime.lastError.message);
+            return;
         }
+
+        debugLog("stored images", images.length);
     });
 }
 
-saveImages(getImagesAndCaptions());
+getImagesAndCaptions().then(saveImages);
