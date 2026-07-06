@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy – BBC Slideshow 3D</title>
+    <style>
+        body {
+            font-family: Georgia, serif;
+            max-width: 720px;
+            margin: 40px auto;
+            padding: 0 20px;
+            color: #222;
+            line-height: 1.7;
+        }
+        h1 { font-size: 1.8rem; margin-bottom: 0.25em; }
+        h2 { font-size: 1.2rem; margin-top: 2em; }
+        p, li { font-size: 1rem; }
+        ul { padding-left: 1.5em; }
+        footer { margin-top: 3em; font-size: 0.85rem; color: #666; }
+    </style>
+</head>
+<body>
+
+<h1>Privacy Policy</h1>
+<p><strong>Extension:</strong> BBC Slideshow 3D<br>
+<strong>Last updated:</strong> 6 July 2025</p>
+
+<h2>Overview</h2>
+<p>BBC Slideshow 3D is a browser extension that reads images and captions from BBC News article pages you visit and displays them in a local 3D gallery. We are committed to protecting your privacy. This policy explains what data the extension touches, how it is used, and what is not done with it.</p>
+
+<h2>Data collected</h2>
+<p>When you visit a BBC News article, the extension reads:</p>
+<ul>
+    <li>The <strong>URLs</strong> of images embedded in the article.</li>
+    <li>The <strong>caption text</strong> associated with those images.</li>
+</ul>
+<p>No other data from the page is accessed. No personally identifiable information (PII), browsing history, cookies, form data, or authentication tokens are read or stored.</p>
+
+<h2>How data is stored</h2>
+<p>Image URLs and captions are saved to <code>chrome.storage.local</code> — browser storage that lives entirely on your own device. The data is overwritten each time you visit a new BBC News article and is cleared when you uninstall the extension.</p>
+
+<h2>Data sharing and transmission</h2>
+<p>The extension does <strong>not</strong>:</p>
+<ul>
+    <li>Send any data to external servers.</li>
+    <li>Use analytics, tracking, or advertising services.</li>
+    <li>Share data with third parties.</li>
+    <li>Collect or transmit any personal information.</li>
+</ul>
+<p>The only network requests made by the extension are fetches of the image files already referenced by the article page, solely to display them in the local gallery.</p>
+
+<h2>Permissions used</h2>
+<ul>
+    <li><strong>activeTab</strong> – allows the extension to open the slideshow page when you click the toolbar icon.</li>
+    <li><strong>storage</strong> – allows the extension to save image URLs and captions in local browser storage.</li>
+    <li><strong>host permission (bbc.co.uk/news/articles/*)</strong> – allows the content script to run on BBC News article pages to collect image data.</li>
+</ul>
+
+<h2>Children's privacy</h2>
+<p>This extension does not knowingly collect any information from children under the age of 13.</p>
+
+<h2>Changes to this policy</h2>
+<p>If the extension is updated in a way that affects data handling, this policy will be updated and the date above will change. Continued use of the extension after any such change constitutes acceptance of the revised policy.</p>
+
+<h2>Contact</h2>
+<p>If you have questions about this privacy policy, please open an issue on the <a href="https://github.com/bumface11/takehart">GitHub repository</a>.</p>
+
+<footer>
+    <p>BBC Slideshow 3D &middot; <a href="https://github.com/bumface11/takehart">github.com/bumface11/takehart</a></p>
+</footer>
+
+</body>
+</html>
