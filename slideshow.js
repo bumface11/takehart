@@ -23,7 +23,6 @@ const OVERVIEW_MOVE_MS = 1200;
 const ZOOM_OUT_BUFFER = 1.9;
 
 const MIDI_TRACK_URL = "music/slideshow.mid";
-const MIDI_PORT_NAME = "Slideshow Tiny Synth";
 const MIDI_GAIN_SCALE = 0.5;
 
 const state = {
@@ -53,7 +52,8 @@ const state = {
     midiProcessor: null,
     midiOut: null,
     midiDurationMs: 0,
-    isMuted: false,
+    isMuted: true,
+    midiInitAttempted: false,
 
     reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches
 };
@@ -65,8 +65,7 @@ let statusEl = null;
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
-const DEBUG_LOADING = true;
-const DEBUG_VISUAL_PROBE = true;
+const DEBUG_LOADING = false;
 
 document.addEventListener("DOMContentLoaded", initialize);
 window.addEventListener("beforeunload", teardown);
@@ -100,8 +99,8 @@ function setControls({ canStart, isRunning }) {
     }
 
     if (muteBtn) {
-        muteBtn.disabled = !canStart || !state.midiEnabled;
-        muteBtn.textContent = state.isMuted ? "Unmute" : "Mute";
+        muteBtn.disabled = !canStart || !state.isRunning || !state.midiEnabled;
+        muteBtn.textContent = state.isMuted ? "Take Hart" : "Mute";
         muteBtn.setAttribute("aria-pressed", state.isMuted ? "true" : "false");
         muteBtn.classList.toggle("muted", state.isMuted);
     }
@@ -244,11 +243,7 @@ function createPhotoCard(texture, caption, index) {
 
     const photo = new THREE.Mesh(
         new THREE.PlaneGeometry(photoWidth, photoHeight),
-        new THREE.MeshBasicMaterial({
-            map: texture,
-            transparent: true,
-            opacity: DEBUG_VISUAL_PROBE ? 1 : 0
-        })
+        new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 1 })
     );
     photo.position.set(0, 0, 0.02);
 
@@ -489,9 +484,6 @@ async function init3DScene(images) {
     debugLog("init3DScene start", { imageCount: images.length });
 
     state.scene = new THREE.Scene();
-    if (DEBUG_VISUAL_PROBE) {
-        state.scene.background = new THREE.Color(0x1f3b57);
-    }
     state.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
     state.camera.position.set(0, 0, 10);
 
@@ -569,14 +561,6 @@ async function init3DScene(images) {
             imageWidth: texture?.image?.width,
             imageHeight: texture?.image?.height
         });
-
-        const photoMesh = card.userData.photoMesh;
-        if (!DEBUG_VISUAL_PROBE && photoMesh?.material) {
-            new TWEEN.Tween(photoMesh.material)
-                .to({ opacity: 1 }, 240)
-                .easing(TWEEN.Easing.Quadratic.Out)
-                .start();
-        }
 
         setStatus(`Loading images... ${loadedCount}/${images.length}`);
     }
@@ -744,18 +728,39 @@ function createMidiProcessor() {
     });
 }
 
-async function ensureMidiLoaded() {
-    if (state.midiLoaded) {
+function applyMidiGainBaseline() {
+    if (!state.midiOut) {
         return;
     }
+
+    const channelVolume = scaleMidiValue(100, { preserveNonZero: true });
+    const expression = scaleMidiValue(127, { preserveNonZero: true });
+    for (let ch = 0; ch < 16; ch++) {
+        state.midiOut.send([0xb0 + ch, 7, channelVolume]);
+        state.midiOut.send([0xb0 + ch, 11, expression]);
+    }
+}
+
+async function ensureMidiLoaded() {
+    if (state.midiLoaded) {
+        return true;
+    }
+
+    if (!state.midiEnabled || state.midiInitAttempted) {
+        return false;
+    }
+
+    state.midiInitAttempted = true;
 
     try {
         if (typeof JZZ === "undefined" || !JZZ.MIDI || !JZZ.MIDI.SMF || !JZZ.synth || !JZZ.synth.Tiny) {
             throw new Error("JZZ modules are missing.");
         }
 
-        JZZ.synth.Tiny.register(MIDI_PORT_NAME);
-        state.midiOut = JZZ().openMidiOut(MIDI_PORT_NAME);
+        state.midiOut = JZZ.synth.Tiny();
+        if (!state.midiOut || typeof state.midiOut.send !== "function") {
+            throw new Error("Tiny synth output unavailable.");
+        }
         state.midiProcessor = createMidiProcessor();
 
         const response = await fetch(MIDI_TRACK_URL);
@@ -771,12 +776,15 @@ async function ensureMidiLoaded() {
         state.midiPlayer.connect(state.midiProcessor);
         state.midiProcessor.connect(state.midiOut);
         state.midiDurationMs = state.midiPlayer.durationMS ? state.midiPlayer.durationMS() : 0;
+        applyMidiGainBaseline();
 
         state.midiLoaded = true;
         applyMidiMuteState();
+        return true;
     } catch (error) {
         state.midiEnabled = false;
         console.warn("MIDI setup unavailable:", error);
+        return false;
     }
 }
 
@@ -814,32 +822,47 @@ function pauseMidiPlayback() {
 }
 
 async function startMidiPlayback() {
-    await ensureMidiLoaded();
-    if (!state.midiEnabled || !state.midiPlayer) {
-        return;
+    const isReady = await ensureMidiLoaded();
+    if (!isReady || !state.midiEnabled || !state.midiPlayer) {
+        return false;
     }
 
     try {
         if (state.midiPlayer.paused && state.midiPlayer.positionMS() > 0) {
-            applyMidiMuteState();
-            if (!state.isMuted) {
-                state.midiPlayer.resume();
-            }
-            return;
+            state.midiPlayer.resume();
+            applyMidiGainBaseline();
+            return true;
         }
 
         if (!state.midiPlayer.playing) {
             state.midiPlayer.play();
         }
 
-        applyMidiMuteState();
+        applyMidiGainBaseline();
+        return true;
     } catch (error) {
         console.warn("Unable to start MIDI playback:", error);
+        return false;
     }
 }
 
-function toggleMute() {
-    state.isMuted = !state.isMuted;
+async function toggleMute() {
+    if (state.isMuted) {
+        const started = await startMidiPlayback();
+        if (!started) {
+            state.midiEnabled = false;
+            setStatus("Music unavailable. MIDI access was blocked or unavailable.", true);
+            setControls({ canStart: state.isReady && state.photoPlanes.length > 0, isRunning: state.isRunning });
+            return;
+        }
+
+        state.isMuted = false;
+        setStatus("Take Hart theme playing.");
+    } else {
+        state.isMuted = true;
+        setStatus("Music muted.");
+    }
+
     applyMidiMuteState();
     setControls({ canStart: state.isReady && state.photoPlanes.length > 0, isRunning: state.isRunning });
 }
@@ -859,10 +882,6 @@ function startSlideshow() {
 
     const cycleMs = state.reducedMotion ? REDUCED_MOTION_CYCLE_MS : DEFAULT_CYCLE_MS;
     state.intervalId = setInterval(moveCameraToNextPhoto, cycleMs);
-
-    startMidiPlayback().catch((error) => {
-        console.warn("Unable to start MIDI playback:", error);
-    });
 
     setControls({ canStart: true, isRunning: true });
 }
@@ -927,8 +946,6 @@ async function initialize() {
         console.error("Slideshow controls failed to initialize.");
         return;
     }
-
-    await ensureMidiLoaded();
 
     setControls({ canStart: false, isRunning: false });
     setStatus("Loading images...");
